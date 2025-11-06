@@ -27,7 +27,7 @@ class Attendee(db.Model):
     __tablename__ = "attendees"
 
     id = db.Column(db.Integer, primary_key=True)
-    event_id = db.Column(db.Integer, db.ForeignKey("events.id"), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey("events.id"))
     name = db.Column(db.String(200), nullable=False)
     classification = db.Column(db.String(50))
     checked_in = db.Column(db.Boolean, default=False)
