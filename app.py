@@ -1,22 +1,33 @@
+import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from dotenv import load_dotenv
+
+# ✅ Cargar .env automáticamente
+load_dotenv()
+
 from config import Config
 from database import db
 from models import Event, Attendee
 from s3_utils import upload_file_to_s3
 
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    # ✅ Verificar que DATABASE_URL sí está cargada
+    if not app.config.get("SQLALCHEMY_DATABASE_URI"):
+        raise RuntimeError("❌ DATABASE_URL no está configurada. Revisa tu archivo .env")
 
     db.init_app(app)
     CORS(app)
 
     @app.route("/")
-    def index():
-        return {"message": "Asist.io API running (Flask 3, Docker, RDS, S3)"}
+    def home():
+        return {"message": "Asist.io API running with RDS + S3"}
 
-    # ✅ Crear evento con imagen
+    # ✅ Crear evento
     @app.route("/events", methods=["POST"])
     def create_event():
         title = request.form.get("title")
@@ -41,23 +52,23 @@ def create_app():
         events = Event.query.order_by(Event.created_at.desc()).all()
         return jsonify([e.to_dict() for e in events])
 
-    # ✅ Obtener evento
-    @app.route("/events/<int:id>", methods=["GET"])
-    def get_event(id):
-        event = Event.query.get_or_404(id)
+    # ✅ Obtener evento por ID
+    @app.route("/events/<int:event_id>", methods=["GET"])
+    def get_event(event_id):
+        event = Event.query.get_or_404(event_id)
         return event.to_dict()
 
     # ✅ Eliminar evento
-    @app.route("/events/<int:id>", methods=["DELETE"])
-    def delete_event(id):
-        event = Event.query.get_or_404(id)
+    @app.route("/events/<int:event_id>", methods=["DELETE"])
+    def delete_event(event_id):
+        event = Event.query.get_or_404(event_id)
         db.session.delete(event)
         db.session.commit()
         return {"message": "deleted"}
 
     # ✅ Crear asistente
     @app.route("/events/<int:event_id>/attendees", methods=["POST"])
-    def create_attendee(event_id):
+    def add_attendee(event_id):
         data = request.json
         event = Event.query.get_or_404(event_id)
 
@@ -72,16 +83,16 @@ def create_app():
 
         return attendee.to_dict(), 201
 
-    # ✅ Listar asistentes de un evento
+    # ✅ Listar asistentes
     @app.route("/events/<int:event_id>/attendees", methods=["GET"])
     def list_attendees(event_id):
         attendees = Attendee.query.filter_by(event_id=event_id).all()
         return jsonify([a.to_dict() for a in attendees])
 
-    # ✅ Toggle Check-in
-    @app.route("/attendees/<int:id>/checkin", methods=["PATCH"])
-    def toggle_checkin(id):
-        attendee = Attendee.query.get_or_404(id)
+    # ✅ Marcar entrada
+    @app.route("/attendees/<int:attendee_id>/checkin", methods=["PATCH"])
+    def toggle_checkin(attendee_id):
+        attendee = Attendee.query.get_or_404(attendee_id)
         attendee.checked_in = not attendee.checked_in
         db.session.commit()
         return attendee.to_dict()
@@ -89,8 +100,9 @@ def create_app():
     return app
 
 
-# ✅ Punto de entrada para Flask y Gunicorn
+# ✅ Permite ejecutar en local
 app = create_app()
 
 if __name__ == "__main__":
+    print("✅ App iniciando con RDS y S3...")
     app.run(host="0.0.0.0", port=5000)

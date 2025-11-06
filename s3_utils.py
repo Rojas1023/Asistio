@@ -17,7 +17,10 @@ def upload_file_to_s3(file):
         file,
         Config.AWS_BUCKET_NAME,
         key,
-        ExtraArgs={"ContentType": file.content_type, "ACL": "public-read"}
+        ExtraArgs={
+            "ContentType": file.content_type,
+            "ACL": "public-read"
+        }
     )
 
     return f"https://{Config.AWS_BUCKET_NAME}.s3.{Config.AWS_REGION}.amazonaws.com/{key}"
