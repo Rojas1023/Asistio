@@ -1,3 +1,7 @@
-Flask==2.2.5
-Flask-SQLAlchemy==3.0.3
-Flask-Cors==4.0.0
+Flask
+flask-cors
+flask_sqlalchemy
+boto3
+gunicorn
+psycopg2-binary
+python-dotenv
